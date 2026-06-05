@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Voxtilly</title>
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/icon16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon32.png">
+    <link rel="icon" type="image/png" sizes="128x128" href="icons/icon128.png">
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <div class="brand">
+          <img src="icons/icon48.png" alt="" aria-hidden="true">
+          <div>
+            <h1>Voxtilly</h1>
+            <p id="status" role="status">Select page text or type your own.</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button id="openWindowButton" class="icon-button popout" type="button" aria-label="Open controls in a separate window" title="Open in separate window">
+            <span aria-hidden="true"></span>
+          </button>
+          <button id="pauseButton" class="icon-button pause" type="button" aria-label="Pause reading" title="Pause" disabled>
+            <span aria-hidden="true"></span>
+          </button>
+          <button id="stopButton" class="icon-button danger" type="button" aria-label="Stop reading" title="Stop">
+            <span aria-hidden="true"></span>
+          </button>
+        </div>
+      </header>
+
+      <section class="panel text-panel">
+        <div class="section-heading">
+          <h2>Text</h2>
+        </div>
+
+        <textarea id="manualText" rows="7" placeholder="Type text or select page text before opening Voxtilly..."></textarea>
+
+        <div class="actions">
+          <button id="readButton" class="primary" type="button">Read Aloud</button>
+        </div>
+      </section>
+
+      <section class="panel settings">
+        <div class="section-heading">
+          <h2>Voice</h2>
+          <button id="toggleFavoriteButton" class="subtle" type="button">Favorite Voice</button>
+        </div>
+
+        <div class="select-stack">
+          <div class="select-row">
+            <label for="languageSelect">Language</label>
+            <select id="languageSelect"></select>
+          </div>
+
+          <div class="select-row">
+            <label for="voiceSelect">Voice</label>
+            <select id="voiceSelect"></select>
+          </div>
+        </div>
+
+        <div id="favoriteLanguages" class="favorite-list" aria-live="polite"></div>
+
+        <div class="slider-grid">
+          <div class="range-row">
+            <label for="rateInput">Rate <span id="rateValue">1.0</span></label>
+            <input id="rateInput" type="range" min="0.5" max="2" value="1" step="0.1">
+          </div>
+
+          <div class="range-row">
+            <label for="pitchInput">Pitch <span id="pitchValue">1.0</span></label>
+            <input id="pitchInput" type="range" min="0" max="2" value="1" step="0.1">
+          </div>
+
+          <div class="range-row">
+            <label for="volumeInput">Volume <span id="volumeValue">100%</span></label>
+            <input id="volumeInput" type="range" min="0" max="100" value="100" step="1">
+          </div>
+        </div>
+      </section>
+
+      <footer class="credits">
+        <span class="credit-links">
+          <span class="credit-label">Made by</span>
+          <a href="https://NATroutter.fi" target="_blank" rel="noopener noreferrer">NATroutter</a>
+        </span>
+        <span class="credit-links">
+          <span class="credit-label">Project page on</span>
+          <a href="https://github.com/NATroutter/Voxtilly" target="_blank" rel="noopener noreferrer">GitHub</a>
+        </span>
+      </footer>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
