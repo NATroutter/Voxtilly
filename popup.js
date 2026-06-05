@@ -24,7 +24,12 @@ const elements = {
   volumeInput: document.getElementById("volumeInput"),
   rateValue: document.getElementById("rateValue"),
   pitchValue: document.getElementById("pitchValue"),
-  volumeValue: document.getElementById("volumeValue")
+  volumeValue: document.getElementById("volumeValue"),
+  favoriteNameModal: document.getElementById("favoriteNameModal"),
+  favoriteNameInput: document.getElementById("favoriteNameInput"),
+  favoriteNamePreview: document.getElementById("favoriteNamePreview"),
+  cancelFavoriteNameButton: document.getElementById("cancelFavoriteNameButton"),
+  saveFavoriteNameButton: document.getElementById("saveFavoriteNameButton")
 };
 
 let voices = [];
@@ -39,6 +44,8 @@ let isDetachedPopup = new URLSearchParams(location.search).has("detached");
 let selectionWatchTimer = null;
 let isCheckingSelection = false;
 let lastLoadedSelectionText = "";
+let favoriteNameResolver = null;
+let favoriteNamePreset = null;
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", init);
@@ -72,6 +79,11 @@ function bindEvents() {
   elements.toggleFavoriteButton.addEventListener("click", toggleCurrentFavorite);
   elements.favoriteLanguages.addEventListener("dragover", handleFavoriteListDragOver);
   elements.favoriteLanguages.addEventListener("drop", handleFavoriteListDrop);
+  elements.favoriteNameModal.addEventListener("click", handleFavoriteNameBackdropClick);
+  elements.favoriteNameInput.addEventListener("input", updateFavoriteNameDialog);
+  elements.favoriteNameInput.addEventListener("keydown", handleFavoriteNameKeyDown);
+  elements.cancelFavoriteNameButton.addEventListener("click", cancelFavoriteNameDialog);
+  elements.saveFavoriteNameButton.addEventListener("click", confirmFavoriteNameDialog);
 
   elements.languageSelect.addEventListener("change", () => {
     applyLanguageSelection(elements.languageSelect.value);
@@ -200,11 +212,15 @@ function normalizeFavoriteVoicePreset(value) {
 
   const lang = typeof value.lang === "string" ? value.lang : "";
   if (!lang) return null;
+  const voiceURI = typeof value.voiceURI === "string" ? value.voiceURI : "";
+  if (!voiceURI) return null;
 
   return {
     lang,
-    voiceURI: typeof value.voiceURI === "string" ? value.voiceURI : "",
-    voiceName: typeof value.voiceName === "string" ? value.voiceName : ""
+    voiceURI,
+    voiceName: typeof value.voiceName === "string" ? value.voiceName : "",
+    label: typeof value.label === "string" ? value.label.trim() : "",
+    id: typeof value.id === "string" && value.id ? value.id : createFavoritePresetId(lang, voiceURI)
   };
 }
 
@@ -235,17 +251,53 @@ function populateVoiceControls() {
   voices = "speechSynthesis" in window ? speechSynthesis.getVoices() : [];
   scheduleVoiceReloadIfNeeded();
 
-  const selectedVoice = voices.find((voice) => voice.voiceURI === settings.voiceURI);
-  const selectedLanguage = settings.lang || selectedVoice?.lang || "";
-  const languages = [...new Set([selectedLanguage, ...voices.map((voice) => voice.lang)].filter(Boolean))].sort();
-  const favoriteLanguages = getFavoriteLanguagesFromPresets(settings.favoriteVoicePresets);
-  const favoriteSet = new Set(favoriteLanguages);
-  const orderedLanguages = [
-    ...favoriteLanguages,
-    ...languages.filter((lang) => !favoriteSet.has(lang))
-  ];
+  if (!voices.length) {
+    const message = getVoiceAvailabilityMessage();
+    fillSelect(elements.languageSelect, [{ value: "", label: message, disabled: true }]);
+    fillSelect(elements.voiceSelect, [{ value: "", label: message, disabled: true }]);
+    elements.languageSelect.value = "";
+    elements.voiceSelect.value = "";
+    elements.languageSelect.disabled = true;
+    elements.voiceSelect.disabled = true;
+    renderFavoriteLanguages();
+    updateFavoriteButton();
+    return;
+  }
 
-  const languageOptions = [{ value: "", label: "Browser default" }];
+  elements.languageSelect.disabled = false;
+  elements.voiceSelect.disabled = false;
+
+  const installedLanguages = [...new Set(voices.map((voice) => voice.lang).filter(Boolean))].sort();
+  const installedLanguageSet = new Set(installedLanguages);
+  const favoriteLanguages = getFavoriteLanguagesFromPresets(settings.favoriteVoicePresets);
+  const favoriteSet = new Set(favoriteLanguages.filter((lang) => installedLanguageSet.has(lang)));
+  const orderedLanguages = [
+    ...favoriteLanguages.filter((lang) => installedLanguageSet.has(lang)),
+    ...installedLanguages.filter((lang) => !favoriteSet.has(lang))
+  ];
+  const selectedVoice = voices.find((voice) => voice.voiceURI === settings.voiceURI);
+  const selectedLanguage = orderedLanguages.includes(settings.lang)
+    ? settings.lang
+    : selectedVoice?.lang && orderedLanguages.includes(selectedVoice.lang)
+      ? selectedVoice.lang
+      : orderedLanguages[0] || "";
+  const matchingVoices = selectedLanguage
+    ? voices.filter((voice) => voice.lang === selectedLanguage)
+    : [];
+  const selectedVoiceForLanguage = matchingVoices.find((voice) => voice.voiceURI === settings.voiceURI);
+  const selectedVoiceURI = selectedVoiceForLanguage?.voiceURI || matchingVoices[0]?.voiceURI || "";
+
+  let settingsChanged = false;
+  if (settings.lang !== selectedLanguage) {
+    settings.lang = selectedLanguage;
+    settingsChanged = true;
+  }
+  if (settings.voiceURI !== selectedVoiceURI) {
+    settings.voiceURI = selectedVoiceURI;
+    settingsChanged = true;
+  }
+
+  const languageOptions = [];
 
   for (const lang of orderedLanguages) {
     const favoriteMarker = favoriteSet.has(lang) ? " *" : "";
@@ -257,47 +309,36 @@ function populateVoiceControls() {
   }
 
   fillSelect(elements.languageSelect, languageOptions);
-  elements.languageSelect.value = languageOptions.some((option) => option.value === selectedLanguage)
-    ? selectedLanguage
-    : "";
+  elements.languageSelect.value = selectedLanguage;
 
-  const matchingVoices = selectedLanguage
-    ? voices.filter((voice) => voice.lang === selectedLanguage)
-    : voices;
-  const voiceOptions = [
-    {
-      value: "",
-      label: selectedLanguage ? `Browser default for ${getLanguageLabel(selectedLanguage)}` : "Browser default"
-    },
-    ...matchingVoices.map((voice) => ({
-      value: voice.voiceURI,
-      label: selectedLanguage
-        ? `${voice.name}${voice.localService ? "" : " (network)"}`
-        : `${getLanguageLabel(voice.lang)} (${voice.lang}) - ${voice.name}${voice.localService ? "" : " (network)"}`
-    }))
-  ];
+  const voiceOptions = matchingVoices.map((voice) => ({
+    value: voice.voiceURI,
+    label: `${voice.name}${voice.localService ? "" : " (network)"}`
+  }));
 
-  if (!matchingVoices.length && voices.length) {
-    voiceOptions.push({ value: "none", label: "No voices for this language", disabled: true });
-  } else if (!voices.length) {
-    voiceOptions.push({ value: "loading", label: "Loading voices...", disabled: true });
+  if (!matchingVoices.length) {
+    voiceOptions.push({ value: "", label: `No voices installed for ${getLanguageLabel(selectedLanguage)}`, disabled: true });
   }
 
   fillSelect(elements.voiceSelect, voiceOptions);
+  elements.voiceSelect.value = selectedVoiceURI;
 
-  const selectedValue = getSelectedVoiceValue(selectedLanguage);
-  if (voiceOptions.some((option) => option.value === selectedValue)) {
-    elements.voiceSelect.value = selectedValue;
-  } else if (voices.length && settings.voiceURI) {
-    elements.voiceSelect.value = "";
-    settings.voiceURI = "";
+  if (settingsChanged) {
     saveSettings();
-  } else {
-    elements.voiceSelect.value = selectedValue;
   }
 
   renderFavoriteLanguages();
   updateFavoriteButton();
+}
+
+function getVoiceAvailabilityMessage() {
+  if (!("speechSynthesis" in window)) {
+    return "Speech synthesis is not available";
+  }
+
+  return voiceLoadAttempts >= 20
+    ? "No installed browser voices found"
+    : "Loading installed voices...";
 }
 
 function scheduleVoiceReloadIfNeeded() {
@@ -318,7 +359,7 @@ function scheduleVoiceReloadIfNeeded() {
   }, 150);
 }
 
-function toggleCurrentFavorite() {
+async function toggleCurrentFavorite() {
   const preset = getCurrentFavoritePreset();
   if (!preset.lang) {
     setStatus("Choose a language or voice before adding a favorite.");
@@ -331,8 +372,15 @@ function toggleCurrentFavorite() {
     });
     setStatus(`${getFavoritePresetLabel(preset)} removed from favorites.`);
   } else {
-    settings.favoriteVoicePresets = [...settings.favoriteVoicePresets, preset];
-    setStatus(`${getFavoritePresetLabel(preset)} added to favorites.`);
+    const label = await requestFavoriteDisplayName(preset);
+    if (!label) {
+      setStatus("Favorite was not added.");
+      return;
+    }
+
+    const labeledPreset = { ...preset, label };
+    settings.favoriteVoicePresets = [...settings.favoriteVoicePresets, labeledPreset];
+    setStatus(`${getFavoritePresetLabel(labeledPreset)} added to favorites.`);
   }
 
   saveSettings({ rebuildContextMenus: true });
@@ -354,7 +402,94 @@ function getCurrentFavoritePreset() {
   const voiceURI = selectedVoice?.lang === lang ? selectedVoice.voiceURI : "";
   const voiceName = voiceURI ? selectedVoice.name : "";
 
-  return { lang, voiceURI, voiceName };
+  return {
+    lang,
+    voiceURI,
+    voiceName,
+    label: "",
+    id: createFavoritePresetId(lang, voiceURI)
+  };
+}
+
+function requestFavoriteDisplayName(preset) {
+  closeFavoriteNameDialog("");
+
+  favoriteNamePreset = preset;
+  const suggestedName = getSuggestedFavoriteDisplayName(preset);
+  elements.favoriteNameInput.value = suggestedName;
+  elements.favoriteNameModal.hidden = false;
+  updateFavoriteNameDialog();
+
+  setTimeout(() => {
+    elements.favoriteNameInput.focus();
+    elements.favoriteNameInput.select();
+  }, 0);
+
+  return new Promise((resolve) => {
+    favoriteNameResolver = resolve;
+  });
+}
+
+function getSuggestedFavoriteDisplayName(preset) {
+  const voice = voices.find((item) => item.voiceURI === preset.voiceURI);
+  return getVoiceDisplayName(voice?.name || preset.voiceName || preset.voiceURI);
+}
+
+function updateFavoriteNameDialog() {
+  const label = elements.favoriteNameInput.value.trim();
+  elements.saveFavoriteNameButton.disabled = !label;
+
+  if (!favoriteNamePreset) {
+    elements.favoriteNamePreview.textContent = "";
+    return;
+  }
+
+  elements.favoriteNamePreview.textContent = label
+    ? getFavoritePresetLabel({ ...favoriteNamePreset, label })
+    : "";
+}
+
+function handleFavoriteNameKeyDown(event) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    confirmFavoriteNameDialog();
+  } else if (event.key === "Escape") {
+    event.preventDefault();
+    cancelFavoriteNameDialog();
+  }
+}
+
+function handleFavoriteNameBackdropClick(event) {
+  if (event.target === elements.favoriteNameModal) {
+    cancelFavoriteNameDialog();
+  }
+}
+
+function confirmFavoriteNameDialog() {
+  const label = elements.favoriteNameInput.value.trim();
+  if (!label) return;
+
+  closeFavoriteNameDialog(label);
+}
+
+function cancelFavoriteNameDialog() {
+  closeFavoriteNameDialog("");
+}
+
+function closeFavoriteNameDialog(value) {
+  if (elements.favoriteNameModal.hidden && !favoriteNameResolver) return;
+
+  const resolver = favoriteNameResolver;
+  favoriteNameResolver = null;
+  favoriteNamePreset = null;
+  elements.favoriteNameModal.hidden = true;
+  elements.favoriteNameInput.value = "";
+  elements.favoriteNamePreview.textContent = "";
+  elements.saveFavoriteNameButton.disabled = false;
+
+  if (resolver) {
+    resolver(value);
+  }
 }
 
 function isFavoritePresetSaved(preset) {
@@ -366,19 +501,81 @@ function getFavoritePresetKey(preset) {
   return `${preset.lang}\n${preset.voiceURI || ""}`;
 }
 
+function createFavoritePresetId(lang, voiceURI) {
+  return `fav-${hashString(getFavoritePresetKey({ lang, voiceURI }))}`;
+}
+
+function hashString(value) {
+  let hash = 2166136261;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return (hash >>> 0).toString(36);
+}
+
 function getFavoritePresetLabel(preset) {
-  if (!preset.voiceURI) return `${preset.lang} (Browser default)`;
+  const languageName = getReadableLanguageName(preset.lang);
+  const voiceLabel = getFavoriteVoiceLabel(preset);
+
+  return `${languageName} (${voiceLabel})`;
+}
+
+function getFavoriteVoiceLabel(preset) {
+  const customLabel = String(preset.label || "").trim();
+  if (customLabel) return customLabel;
 
   const voice = voices.find((item) => item.voiceURI === preset.voiceURI);
-  return `${preset.lang} (${voice?.name || preset.voiceName || preset.voiceURI})`;
+  return getVoiceDisplayName(voice?.name || preset.voiceName || preset.voiceURI);
 }
 
 function getFavoriteChipTitle(preset) {
   const voice = voices.find((item) => item.voiceURI === preset.voiceURI);
+  const displayLabel = getFavoritePresetLabel(preset);
 
   return voice
-    ? `Voice: ${voice.name}. Drag to reorder.`
-    : "Browser default voice. Drag to reorder.";
+    ? `${displayLabel}. Voice: ${voice.name}. Drag to reorder.`
+    : `${displayLabel}. Drag to reorder.`;
+}
+
+function getVoiceDisplayName(value) {
+  return String(value || "").trim() || "Voice";
+}
+
+function getReadableLanguageName(lang) {
+  const languageName = getDisplayName(lang, "language");
+  const locale = getParsedLocale(lang);
+  if (!locale) return languageName || lang;
+
+  const baseLocale = getParsedLocale(locale.language);
+  const shouldUseBaseLanguage = locale.region && baseLocale?.maximize().region === locale.maximize().region;
+
+  if (shouldUseBaseLanguage) {
+    return getDisplayName(locale.language, "language") || languageName || lang;
+  }
+
+  return languageName || lang;
+}
+
+function getParsedLocale(value) {
+  try {
+    return new Intl.Locale(value);
+  } catch (_error) {
+    return null;
+  }
+}
+
+function getDisplayName(value, type) {
+  if (!value) return "";
+
+  try {
+    const displayNames = new Intl.DisplayNames([navigator.language || "en"], { type });
+    return displayNames.of(value) || value;
+  } catch (_error) {
+    return value;
+  }
 }
 
 function renderFavoriteLanguages() {
@@ -517,7 +714,7 @@ function clearFavoriteDropTargets() {
 
 function updateFavoriteButton() {
   const preset = getCurrentFavoritePreset();
-  elements.toggleFavoriteButton.disabled = !preset.lang;
+  elements.toggleFavoriteButton.disabled = !preset.lang || !preset.voiceURI;
   elements.toggleFavoriteButton.textContent = isFavoritePresetSaved(preset)
     ? "Remove Favorite"
     : "Favorite Voice";
@@ -525,7 +722,7 @@ function updateFavoriteButton() {
 
 function applyLanguageSelection(lang) {
   settings.lang = lang;
-  settings.voiceURI = "";
+  settings.voiceURI = voices.find((voice) => voice.lang === lang)?.voiceURI || "";
 }
 
 function applyVoiceSelection(voiceURI) {
@@ -539,17 +736,6 @@ function applyVoiceSelection(voiceURI) {
 
   settings.voiceURI = voiceURI;
   settings.lang = selectedVoice.lang || settings.lang;
-}
-
-function getSelectedVoiceValue(selectedLanguage = settings.lang) {
-  if (!settings.voiceURI) return "";
-
-  const selectedVoice = voices.find((voice) => voice.voiceURI === settings.voiceURI);
-  if (!selectedLanguage || !selectedVoice || selectedVoice.lang === selectedLanguage) {
-    return settings.voiceURI;
-  }
-
-  return "";
 }
 
 function getSelectedLanguage() {

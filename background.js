@@ -61,16 +61,16 @@ function rebuildContextMenus(done) {
       const favorites = normalizeFavoriteVoicePresets(settings.favoriteVoicePresets);
       const items = [];
 
-      if (favorites.length > 1) {
+      if (favorites.length) {
         items.push({
           id: MENU_ROOT_ID,
           title: "Read selected text",
           contexts: ["selection"]
         });
 
-        for (const [index, favorite] of favorites.entries()) {
+        for (const favorite of favorites) {
           items.push({
-            id: `${FAVORITE_MENU_PREFIX}${index}`,
+            id: `${FAVORITE_MENU_PREFIX}${favorite.id}`,
             parentId: MENU_ROOT_ID,
             title: getFavoriteMenuTitle(favorite),
             contexts: ["selection"]
@@ -83,7 +83,7 @@ function rebuildContextMenus(done) {
 
       items.push({
         id: MENU_ROOT_ID,
-        title: favorites.length ? `Read selected text (${getFavoriteMenuTitle(favorites[0])})` : "Read selected text",
+        title: "Read selected text",
         contexts: ["selection"]
       });
 
@@ -118,10 +118,15 @@ function normalizeFavoriteVoicePresets(value) {
     const lang = typeof item.lang === "string" ? item.lang : "";
     if (!lang) continue;
 
+    const voiceURI = typeof item.voiceURI === "string" ? item.voiceURI : "";
+    if (!voiceURI) continue;
+
     const preset = {
       lang,
-      voiceURI: typeof item.voiceURI === "string" ? item.voiceURI : "",
-      voiceName: typeof item.voiceName === "string" ? item.voiceName : ""
+      voiceURI,
+      voiceName: typeof item.voiceName === "string" ? item.voiceName : "",
+      label: typeof item.label === "string" ? item.label.trim() : "",
+      id: typeof item.id === "string" && item.id ? item.id : createFavoritePresetId(lang, voiceURI)
     };
     const key = getFavoritePresetKey(preset);
     if (seenKeys.has(key)) continue;
@@ -137,22 +142,89 @@ function getFavoritePresetKey(preset) {
   return `${preset.lang}\n${preset.voiceURI || ""}`;
 }
 
+function createFavoritePresetId(lang, voiceURI) {
+  return `fav-${hashString(getFavoritePresetKey({ lang, voiceURI }))}`;
+}
+
+function hashString(value) {
+  let hash = 2166136261;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return (hash >>> 0).toString(36);
+}
+
 function getFavoriteMenuTitle(preset) {
-  return preset.voiceURI
-    ? `${preset.lang} (${preset.voiceName || preset.voiceURI})`
-    : `${preset.lang} (Browser default)`;
+  return `${getReadableLanguageName(preset.lang)} (${getFavoriteVoiceLabel(preset)})`;
+}
+
+function getFavoriteVoiceLabel(preset) {
+  const customLabel = String(preset.label || "").trim();
+  if (customLabel) return customLabel;
+
+  return getVoiceDisplayName(preset.voiceName || preset.voiceURI);
+}
+
+function getVoiceDisplayName(value) {
+  return String(value || "").trim() || "Voice";
+}
+
+function getReadableLanguageName(lang) {
+  const languageName = getDisplayName(lang, "language");
+  const locale = getParsedLocale(lang);
+  if (!locale) return languageName || lang;
+
+  const baseLocale = getParsedLocale(locale.language);
+  const shouldUseBaseLanguage = locale.region && baseLocale?.maximize().region === locale.maximize().region;
+
+  if (shouldUseBaseLanguage) {
+    return getDisplayName(locale.language, "language") || languageName || lang;
+  }
+
+  return languageName || lang;
+}
+
+function getParsedLocale(value) {
+  try {
+    return new Intl.Locale(value);
+  } catch (_error) {
+    return null;
+  }
+}
+
+function getDisplayName(value, type) {
+  if (!value) return "";
+
+  try {
+    const displayNames = new Intl.DisplayNames([chrome.i18n?.getUILanguage?.() || "en"], { type });
+    return displayNames.of(value) || value;
+  } catch (_error) {
+    return value;
+  }
 }
 
 function favoritesChanged(change) {
   if (!change) return false;
 
   const oldFavorites = normalizeFavoriteVoicePresets(change.oldValue?.favoriteVoicePresets)
-    .map(getFavoritePresetKey)
+    .map(getFavoriteMenuSignature)
     .join("\n");
   const newFavorites = normalizeFavoriteVoicePresets(change.newValue?.favoriteVoicePresets)
-    .map(getFavoritePresetKey)
+    .map(getFavoriteMenuSignature)
     .join("\n");
   return oldFavorites !== newFavorites;
+}
+
+function getFavoriteMenuSignature(preset) {
+  return [
+    getFavoritePresetKey(preset),
+    preset.voiceName || "",
+    preset.label || "",
+    preset.id || ""
+  ].join("\n");
 }
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
@@ -160,10 +232,10 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     return;
   }
 
-  const favoriteIndex = getFavoriteIndexFromMenuId(info.menuItemId);
-  const settings = favoriteIndex === null
+  const favoriteId = getFavoriteIdFromMenuId(info.menuItemId);
+  const settings = favoriteId === ""
     ? await getSingleFavoriteOverride()
-    : await getFavoriteOverride(favoriteIndex);
+    : await getFavoriteOverride(favoriteId);
   await sendTabMessage(tab.id, {
     type: "VOXTILLY_CORE_SPEAK_TEXT",
     text: info.selectionText,
@@ -191,13 +263,12 @@ async function sendTabMessage(tabId, message) {
   }
 }
 
-function getFavoriteIndexFromMenuId(menuItemId) {
+function getFavoriteIdFromMenuId(menuItemId) {
   if (typeof menuItemId !== "string" || !menuItemId.startsWith(FAVORITE_MENU_PREFIX)) {
-    return null;
+    return "";
   }
 
-  const value = Number(menuItemId.slice(FAVORITE_MENU_PREFIX.length));
-  return Number.isInteger(value) && value >= 0 ? value : null;
+  return menuItemId.slice(FAVORITE_MENU_PREFIX.length);
 }
 
 function getSingleFavoriteOverride() {
@@ -211,12 +282,12 @@ function getSingleFavoriteOverride() {
   });
 }
 
-function getFavoriteOverride(index) {
+function getFavoriteOverride(id) {
   return new Promise((resolve) => {
     chrome.storage.sync.get({ ttsSettings: DEFAULT_SETTINGS }, ({ ttsSettings }) => {
       const settings = { ...DEFAULT_SETTINGS, ...ttsSettings };
       const favorites = normalizeFavoriteVoicePresets(settings.favoriteVoicePresets);
-      const favorite = favorites[index];
+      const favorite = favorites.find((item) => item.id === id);
 
       resolve(favorite ? getFavoriteSettings(favorite) : {});
     });

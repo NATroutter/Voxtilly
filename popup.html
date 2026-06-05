@@ -94,6 +94,19 @@
       </footer>
     </main>
 
+    <div id="favoriteNameModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="favoriteNameTitle" hidden>
+      <div class="modal-panel">
+        <h2 id="favoriteNameTitle">Favorite name</h2>
+        <label for="favoriteNameInput">Display name</label>
+        <input id="favoriteNameInput" type="text" maxlength="80" autocomplete="off">
+        <p id="favoriteNamePreview" class="modal-hint"></p>
+        <div class="modal-actions">
+          <button id="cancelFavoriteNameButton" class="subtle" type="button">Cancel</button>
+          <button id="saveFavoriteNameButton" class="primary" type="button">Save</button>
+        </div>
+      </div>
+    </div>
+
     <script src="popup.js"></script>
   </body>
 </html>

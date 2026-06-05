@@ -26,12 +26,11 @@ It is designed for quick reading, proofreading, accessibility support, language 
 - Automatic selected-text loading when the toolbar popup opens.
 - Detached control window that keeps watching the original tab for new selections.
 - Separate `Language` and `Voice` dropdowns.
-- Favorite voice preset pills with drag-and-drop ordering.
+- Favorite voice preset pills with custom display names and drag-and-drop ordering.
 - Multiple favorites per language, each with its own voice model.
 - Right-click context menu that follows your favorite preset order.
 - Pause, resume, and stop controls.
 - Rate, pitch, and volume sliders.
-- Browser-default voice support when you want Chrome to choose.
 - Manifest V3 with narrow, user-triggered permissions.
 - No analytics, no remote scripts, and no custom server processing.
 
@@ -96,16 +95,15 @@ Voxtilly keeps language and voice selection separate:
 | --- | --- |
 | `Language` | Sets the target speech language. |
 | `Voice` | Shows browser voices matching the selected language. |
-| `Browser default` | Lets Chrome choose the best available voice. |
 
 Available voices depend on Chrome, your operating system, installed speech packages, and browser speech services.
 
 ## Favorite Voice Presets
 
-Favorites appear as pill badges in the popup and store both the language and selected voice model. That means you can keep multiple favorites for the same language, such as `en-GB (Microsoft Susan)` and another `en-GB` voice.
+Favorites appear as pill badges in the popup and store both the language and selected voice model. When you add a favorite, Voxtilly asks for a display name so the UI and context menu can stay clean without guessing, rewriting, or parsing browser voice names. You can keep multiple favorites for the same language with different voice models.
 
 - Add the currently selected language and voice pair.
-- Save browser-default favorites when no specific voice model is selected.
+- Name each favorite when it is added.
 - Remove a preset with the pill's `x` button.
 - Drag pills to rearrange the order.
 - Use that same order in the right-click context menu.
