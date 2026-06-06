@@ -152,7 +152,7 @@ Voxtilly/
 On Windows PowerShell:
 
 ```powershell
-Compress-Archive -Path manifest.json,popup.html,popup.css,popup.js,background.js,content.js,icons -DestinationPath dist\voxtilly-1.0.0.zip -Force
+Compress-Archive -Path manifest.json,popup.html,popup.css,popup.js,background.js,content.js,icons -DestinationPath dist\voxtilly-1.0.2.zip -Force
 ```
 
 The generated ZIP can be uploaded to the Chrome Web Store Developer Dashboard.
