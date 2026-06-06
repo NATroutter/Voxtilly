@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Voxtilly",
+  "name": "Voxtilly: Simple text to speach that just works (TTS)",
   "version": "1.0.0",
   "description": "Read selected page text aloud and manually enter text using browser text-to-speech voices.",
   "icons": {
