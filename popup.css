@@ -313,32 +313,70 @@ button.subtle {
   background: rgba(255, 99, 116, 0.1);
 }
 
-.favorite-list {
-  display: flex;
-  min-height: 28px;
-  flex-wrap: wrap;
-  align-items: center;
+.favorite-presets {
+  display: grid;
   gap: 8px;
+}
+
+.favorite-presets-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 18px;
+}
+
+h3 {
+  margin: 0;
+  color: #aeb9bf;
+  font-size: 11px;
+  font-weight: 820;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.favorite-heading-star,
+.favorite-card-star {
+  display: block;
+  flex: 0 0 auto;
+  background: #8b5cff;
+  clip-path: polygon(
+    50% 0,
+    61% 35%,
+    98% 35%,
+    68% 56%,
+    79% 91%,
+    50% 70%,
+    21% 91%,
+    32% 56%,
+    2% 35%,
+    39% 35%
+  );
+}
+
+.favorite-heading-star {
+  width: 13px;
+  height: 13px;
+}
+
+.favorite-list {
+  display: grid;
+  min-height: 28px;
+  gap: 7px;
   color: #788892;
   font-size: 12px;
 }
 
-.favorite-chip {
-  display: inline-flex;
-  max-width: 100%;
+.favorite-card {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 28px;
   align-items: center;
   gap: 8px;
-  border: 1px solid rgba(113, 142, 255, 0.46);
-  border-radius: 999px;
-  background:
-    linear-gradient(180deg, rgba(77, 102, 255, 0.2), rgba(68, 84, 214, 0.12)),
-    rgba(14, 19, 30, 0.86);
-  color: #e4e9ff;
+  min-height: 50px;
+  border: 1px solid rgba(136, 156, 166, 0.2);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(13, 19, 27, 0.96), rgba(8, 13, 19, 0.98));
   cursor: grab;
-  font-size: 12px;
-  font-weight: 720;
-  line-height: 1;
-  padding: 5px 6px 5px 10px;
+  padding: 7px 8px;
   transition:
     border-color 150ms ease,
     box-shadow 150ms ease,
@@ -347,64 +385,93 @@ button.subtle {
   user-select: none;
 }
 
-.favorite-chip:hover {
-  border-color: rgba(159, 178, 255, 0.72);
-  box-shadow: 0 6px 18px rgba(42, 72, 190, 0.16);
+.favorite-card:hover {
+  border-color: rgba(139, 92, 255, 0.52);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
 }
 
-.favorite-chip:active {
+.favorite-card:active {
   cursor: grabbing;
 }
 
-.favorite-chip.is-dragging {
+.favorite-card.is-dragging {
   opacity: 0.46;
-  transform: scale(0.98);
+  transform: scale(0.99);
 }
 
-.favorite-chip.is-drop-target {
-  border-color: #adc0ff;
+.favorite-card.is-drop-target {
+  border-color: #9f7cff;
   box-shadow:
-    inset 3px 0 0 #adc0ff,
-    0 0 0 3px rgba(91, 126, 255, 0.2);
+    inset 3px 0 0 #8b5cff,
+    0 0 0 3px rgba(139, 92, 255, 0.18);
 }
 
-.favorite-chip-label {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  white-space: normal;
+.favorite-card-star {
+  width: 20px;
+  height: 20px;
+  filter: drop-shadow(0 0 7px rgba(139, 92, 255, 0.36));
 }
 
-.favorite-chip button {
+.favorite-card-text {
   display: grid;
-  width: 18px;
-  min-width: 18px;
-  min-height: 18px;
-  place-items: center;
-  border: 1px solid rgba(190, 201, 255, 0.18);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-  color: #c8d2ff;
-  cursor: pointer;
+  min-width: 0;
+  gap: 3px;
+}
+
+.favorite-card-title,
+.favorite-card-subtitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.favorite-card-title {
+  color: #f0f4f7;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.favorite-card-subtitle {
+  color: #7f8d95;
   font-size: 11px;
-  font-weight: 900;
-  line-height: 1;
+  font-weight: 620;
+}
+
+.favorite-card-remove {
+  position: relative;
+  display: grid;
+  width: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  place-items: center;
+  border-color: rgba(113, 142, 166, 0.3);
+  background: rgba(7, 12, 18, 0.78);
   padding: 0;
-  text-transform: uppercase;
-  transition:
-    background 150ms ease,
-    border-color 150ms ease,
-    color 150ms ease,
-    transform 150ms ease;
 }
 
-.favorite-chip button:hover {
+.favorite-card-remove span,
+.favorite-card-remove span::before {
+  display: block;
+  width: 11px;
+  height: 2px;
+  border-radius: 999px;
+  background: #aeb9bf;
+  content: "";
+  transform: rotate(45deg);
+}
+
+.favorite-card-remove span::before {
+  transform: rotate(90deg);
+}
+
+.favorite-card-remove:hover {
   border-color: rgba(255, 99, 116, 0.62);
-  background: rgba(255, 99, 116, 0.14);
-  color: #ff9aa6;
+  background: rgba(255, 99, 116, 0.12);
 }
 
-.favorite-chip button:active {
-  transform: scale(0.92);
+.favorite-card-remove:hover span,
+.favorite-card-remove:hover span::before {
+  background: #ff9aa6;
 }
 
 .slider-grid {

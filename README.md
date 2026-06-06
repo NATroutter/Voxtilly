@@ -17,7 +17,7 @@
   <img alt="No Tracking" src="https://img.shields.io/badge/privacy-no%20tracking-0f766e?style=for-the-badge">
 </p>
 
-Voxtilly turns selected webpage text into speech with a focused popup UI, separated language and voice controls, favorite voice preset chips, and playback controls that stay out of your way. It uses Chrome's built-in browser speech support, so there is no account, no custom cloud API, and no analytics pipeline hiding behind the curtain.
+Voxtilly turns selected webpage text into speech with a focused popup UI, separated language and voice controls, favorite voice preset cards, and playback controls that stay out of your way. It uses Chrome's built-in browser speech support, so there is no account, no custom cloud API, and no analytics pipeline hiding behind the curtain.
 
 It is designed for quick reading, proofreading, accessibility support, language checks, and those times when listening is simply easier than staring at a page.
 
@@ -26,7 +26,7 @@ It is designed for quick reading, proofreading, accessibility support, language 
 - Automatic selected-text loading when the toolbar popup opens.
 - Detached control window that keeps watching the original tab for new selections.
 - Separate `Language` and `Voice` dropdowns.
-- Favorite voice preset pills with custom display names and drag-and-drop ordering.
+- Favorite voice preset cards with custom display names and drag-and-drop ordering.
 - Multiple favorites per language, each with its own voice model.
 - Right-click context menu that follows your favorite preset order.
 - Pause, resume, and stop controls.
@@ -85,7 +85,7 @@ Voxtilly will not overwrite the text box while you are actively typing in it.
 2. Right-click the selection.
 3. Choose `Read selected text`.
 
-If you add multiple favorite voice presets, the context menu shows them in the same order as your draggable favorite pills.
+If you add multiple favorite voice presets, the context menu shows them in the same order as your draggable favorite cards.
 
 ## Voice Controls
 
@@ -100,12 +100,12 @@ Available voices depend on Chrome, your operating system, installed speech packa
 
 ## Favorite Voice Presets
 
-Favorites appear as pill badges in the popup and store both the language and selected voice model. When you add a favorite, Voxtilly asks for a display name so the UI and context menu can stay clean without guessing, rewriting, or parsing browser voice names. You can keep multiple favorites for the same language with different voice models.
+Favorites appear as compact cards in the popup and store both the language and selected voice model. When you add a favorite, Voxtilly asks for a display name so the UI and context menu can stay clean without guessing, rewriting, or parsing browser voice names. You can keep multiple favorites for the same language with different voice models.
 
 - Add the currently selected language and voice pair.
 - Name each favorite when it is added.
-- Remove a preset with the pill's `x` button.
-- Drag pills to rearrange the order.
+- Remove a preset with the card's X button.
+- Drag cards to rearrange the order.
 - Use that same order in the right-click context menu.
 
 ## Privacy

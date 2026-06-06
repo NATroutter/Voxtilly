@@ -531,13 +531,17 @@ function getFavoriteVoiceLabel(preset) {
   return getVoiceDisplayName(voice?.name || preset.voiceName || preset.voiceURI);
 }
 
-function getFavoriteChipTitle(preset) {
+function getFavoriteCardTitle(preset) {
   const voice = voices.find((item) => item.voiceURI === preset.voiceURI);
   const displayLabel = getFavoritePresetLabel(preset);
 
   return voice
     ? `${displayLabel}. Voice: ${voice.name}. Drag to reorder.`
     : `${displayLabel}. Drag to reorder.`;
+}
+
+function getFavoriteLanguageDetail(preset) {
+  return `${getLanguageLabel(preset.lang)} (${preset.lang})`;
 }
 
 function getVoiceDisplayName(value) {
@@ -587,31 +591,47 @@ function renderFavoriteLanguages() {
   elements.favoriteLanguages.replaceChildren(
     ...settings.favoriteVoicePresets.map((preset) => {
       const presetKey = getFavoritePresetKey(preset);
-      const chip = document.createElement("span");
-      chip.className = "favorite-chip";
-      chip.draggable = true;
-      chip.dataset.favoriteKey = presetKey;
-      chip.title = getFavoriteChipTitle(preset);
-      chip.addEventListener("dragstart", (event) => handleFavoriteDragStart(event, presetKey));
-      chip.addEventListener("dragover", handleFavoriteDragOver);
-      chip.addEventListener("dragleave", handleFavoriteDragLeave);
-      chip.addEventListener("drop", (event) => handleFavoriteDrop(event, presetKey));
-      chip.addEventListener("dragend", handleFavoriteDragEnd);
+      const card = document.createElement("div");
+      card.className = "favorite-card";
+      card.draggable = true;
+      card.dataset.favoriteKey = presetKey;
+      card.title = getFavoriteCardTitle(preset);
+      card.addEventListener("dragstart", (event) => handleFavoriteDragStart(event, presetKey));
+      card.addEventListener("dragover", handleFavoriteDragOver);
+      card.addEventListener("dragleave", handleFavoriteDragLeave);
+      card.addEventListener("drop", (event) => handleFavoriteDrop(event, presetKey));
+      card.addEventListener("dragend", handleFavoriteDragEnd);
 
-      const label = document.createElement("span");
-      label.className = "favorite-chip-label";
-      label.textContent = getFavoritePresetLabel(preset);
+      const star = document.createElement("span");
+      star.className = "favorite-card-star";
+      star.setAttribute("aria-hidden", "true");
+
+      const text = document.createElement("span");
+      text.className = "favorite-card-text";
+
+      const title = document.createElement("span");
+      title.className = "favorite-card-title";
+      title.textContent = getFavoriteVoiceLabel(preset);
+
+      const subtitle = document.createElement("span");
+      subtitle.className = "favorite-card-subtitle";
+      subtitle.textContent = getFavoriteLanguageDetail(preset);
+
+      text.append(title, subtitle);
 
       const removeButton = document.createElement("button");
       removeButton.type = "button";
-      removeButton.className = "favorite-chip-remove";
+      removeButton.className = "favorite-card-remove";
       removeButton.setAttribute("aria-label", `Remove ${getFavoritePresetLabel(preset)} from favorites`);
       removeButton.title = `Remove ${getFavoritePresetLabel(preset)}`;
-      removeButton.textContent = "x";
-      removeButton.addEventListener("click", () => removeFavoritePreset(preset));
+      removeButton.append(document.createElement("span"));
+      removeButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        removeFavoritePreset(preset);
+      });
 
-      chip.append(label, removeButton);
-      return chip;
+      card.append(star, text, removeButton);
+      return card;
     })
   );
 }
@@ -701,14 +721,14 @@ function handleFavoriteListDrop(event) {
 function clearFavoriteDragState() {
   draggedFavoriteLang = "";
   clearFavoriteDropTargets();
-  for (const chip of elements.favoriteLanguages.querySelectorAll(".favorite-chip")) {
-    chip.classList.remove("is-dragging");
+  for (const card of elements.favoriteLanguages.querySelectorAll(".favorite-card")) {
+    card.classList.remove("is-dragging");
   }
 }
 
 function clearFavoriteDropTargets() {
-  for (const chip of elements.favoriteLanguages.querySelectorAll(".favorite-chip")) {
-    chip.classList.remove("is-drop-target");
+  for (const card of elements.favoriteLanguages.querySelectorAll(".favorite-card")) {
+    card.classList.remove("is-drop-target");
   }
 }
 
