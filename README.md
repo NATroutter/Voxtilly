@@ -40,9 +40,9 @@ It is designed for quick reading, proofreading, accessibility support, language 
 
 Voxtilly is packaged for Chrome Web Store publishing.
 
-```text
-Store link coming soon
-```
+<a href="[center](https://chromewebstore.google.com/detail/voxtilly/ghcbdiijlmbecephdomagfjngefloenc)">
+  <img src="available_chrome.png" alt="Available Chrome Web Store" width="180">
+</a>
 
 ### Local Install
 
